@@ -1,0 +1,682 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🐮 Cow Valentine Game</title>
+  <style>
+    :root{
+      --pink:#ff3b7a;
+      --pink2:#ff6fa1;
+      --ink:#1f1f1f;
+      --card:#ffffffcc;
+      --shadow: 0 18px 50px rgba(0,0,0,.14);
+    }
+    *{ box-sizing:border-box; }
+
+    body{
+      margin:0;
+      min-height:100vh;
+      display:grid;
+      place-items:center;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      color:var(--ink);
+      background:
+        radial-gradient(900px 700px at 20% 10%, #ffe0ee, transparent 60%),
+        radial-gradient(900px 700px at 85% 80%, #e7fff4, transparent 60%),
+        linear-gradient(135deg, #fff7fb, #fff);
+      overflow-x:hidden;
+      overflow-y:auto;
+    }
+
+    /* cow spots */
+    .spots{
+      position:fixed; inset:0; pointer-events:none; opacity:.16;
+      background:
+        radial-gradient(70px 50px at 10% 15%, #000 0 55%, transparent 56%),
+        radial-gradient(90px 60px at 25% 65%, #000 0 55%, transparent 56%),
+        radial-gradient(80px 55px at 55% 25%, #000 0 55%, transparent 56%),
+        radial-gradient(120px 75px at 78% 45%, #000 0 55%, transparent 56%),
+        radial-gradient(85px 55px at 85% 80%, #000 0 55%, transparent 56%),
+        radial-gradient(60px 45px at 42% 85%, #000 0 55%, transparent 56%);
+    }
+
+    .wrap{
+      width:min(980px, 95vw);
+      display:grid;
+      gap:14px;
+    }
+
+    .card{
+      background:var(--card);
+      backdrop-filter: blur(10px);
+      border:1px solid rgba(255,255,255,.7);
+      border-radius:22px;
+      box-shadow:var(--shadow);
+      padding:16px;
+    }
+
+    .top{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      align-items:flex-start;
+    }
+
+    .badge{
+      display:inline-flex;
+      gap:10px;
+      align-items:center;
+      padding:10px 14px;
+      border-radius:999px;
+      background: rgba(255, 59, 122, .12);
+      border:1px solid rgba(255, 59, 122, .22);
+      font-weight:900;
+    }
+
+    h1{
+      margin:10px 0 6px;
+      font-size: clamp(24px, 3.2vw, 40px);
+      letter-spacing:-0.02em;
+    }
+    .sub{
+      margin:0;
+      opacity:.9;
+      line-height:1.5;
+      font-size: clamp(14px, 1.6vw, 18px);
+    }
+
+    .hud{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin-top:12px;
+    }
+    .pill{
+      padding:10px 12px;
+      border-radius:14px;
+      background: rgba(255,255,255,.86);
+      border:1px solid rgba(0,0,0,.08);
+      font-weight:900;
+      display:flex;
+      gap:10px;
+      align-items:center;
+      min-width: 210px;
+    }
+    .pill small{ opacity:.7; font-weight:800; }
+
+    .btn{
+      border:none;
+      cursor:pointer;
+      padding:12px 14px;
+      border-radius:16px;
+      font-weight:950;
+      font-size:16px;
+      user-select:none;
+      transition: transform .12s ease;
+    }
+    .btn:active{ transform: scale(.98); }
+
+    .btn-primary{
+      color:white;
+      background: linear-gradient(135deg, var(--pink), var(--pink2));
+      box-shadow: 0 14px 28px rgba(255, 59, 122, .25);
+    }
+    .btn-ghost{
+      background: rgba(255,255,255,.86);
+      border:1px solid rgba(0,0,0,.08);
+      color:#333;
+    }
+
+    .controls{
+      min-width:280px;
+      justify-content:space-between;
+    }
+
+    /* GAME BOARD (DOM-based) */
+    #board{
+      position:relative;
+      width:100%;
+      height: clamp(360px, 60vh, 560px);
+      border-radius:18px;
+      border:1px solid rgba(0,0,0,.08);
+      box-shadow: 0 18px 40px rgba(0,0,0,.12);
+      background: linear-gradient(#bff2ff 0 55%, #baf2c2 55% 100%);
+      overflow:hidden;
+    }
+
+    .cloud{
+      position:absolute;
+      top:16px;
+      font-size:48px;
+      opacity:.55;
+      user-select:none;
+      pointer-events:none;
+      animation: drift 12s linear infinite;
+    }
+    .cloud:nth-child(1){ left:-80px; animation-delay:0s; }
+    .cloud:nth-child(2){ top:55px; left:-220px; animation-delay:3s; }
+    .cloud:nth-child(3){ top:30px; left:-140px; animation-delay:6s; }
+    @keyframes drift{
+      from{ transform: translateX(0); }
+      to{ transform: translateX(calc(100vw + 320px)); }
+    }
+
+    #cow{
+      position:absolute;
+      bottom:14px;
+      left:50%;
+      transform: translateX(-50%);
+      font-size:56px;
+      user-select:none;
+      pointer-events:none;
+      filter: drop-shadow(0 10px 18px rgba(0,0,0,.12));
+    }
+
+    .heart{
+      position:absolute;
+      top:-40px;
+      font-size:32px;
+      user-select:none;
+      pointer-events:none;
+      will-change: transform;
+    }
+
+    .overlay{
+      position:absolute;
+      inset:0;
+      display:grid;
+      place-items:center;
+      background: rgba(255,255,255,.62);
+      text-align:left;
+      padding:18px;
+    }
+    .overlay .box{
+      width:min(720px, 92%);
+      background: rgba(255,255,255,.92);
+      border:1px solid rgba(0,0,0,.08);
+      border-radius:18px;
+      padding:16px;
+      box-shadow: 0 16px 36px rgba(0,0,0,.10);
+    }
+    .overlay h2{
+      margin:0 0 8px;
+      font-size:26px;
+    }
+    .overlay p{
+      margin:0;
+      opacity:.9;
+      line-height:1.5;
+    }
+
+    .tips{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+      font-size:14px;
+      opacity:.9;
+      margin-top:10px;
+    }
+    kbd{
+      padding:3px 8px;
+      border-radius:8px;
+      background:#fff;
+      border:1px solid rgba(0,0,0,.1);
+      box-shadow: 0 4px 10px rgba(0,0,0,.06);
+      font-weight:900;
+    }
+
+    /* MODAL */
+    .modal{
+      position:fixed; inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      background: rgba(0,0,0,.35);
+      padding:18px;
+      z-index:1000;
+    }
+    .modal.show{ display:flex; }
+    .modal-card{
+      width:min(720px, 95vw);
+      background:white;
+      border-radius:24px;
+      padding:18px;
+      box-shadow:var(--shadow);
+    }
+    .modal-card h2{
+      margin:10px 0 6px;
+      font-size: clamp(22px, 2.8vw, 36px);
+    }
+    .modal-card p{
+      margin:0;
+      line-height:1.55;
+      opacity:.92;
+      font-size: clamp(15px, 1.7vw, 18px);
+    }
+    .choice{
+      margin-top:14px;
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    #noBtn{
+      background: rgba(255,255,255,.92);
+      border:1px solid rgba(0,0,0,.10);
+      color:#333;
+      box-shadow: 0 10px 18px rgba(0,0,0,.10);
+      position:relative;
+      min-width:140px;
+    }
+
+    /* Confetti */
+    #confetti{
+      position:fixed; inset:0;
+      pointer-events:none;
+      z-index:1100;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="spots"></div>
+  <canvas id="confetti"></canvas>
+
+  <div class="wrap">
+    <section class="card">
+      <div class="top">
+        <div>
+          <div class="badge">🐮 Cow Cupid Mini-Game</div>
+          <h1>Shiv is on a mission for Aditi's 💖</h1>
+          <p class="sub">Help Shiv's cow collect hearts to unlock a very important question</p>
+
+          <div class="hud">
+            <div class="pill">
+              <span>Score: <span id="score">0</span>/10</span>
+              <span style="margin-left:auto;"><small>Time:</small> <span id="time">30</span>s</span>
+            </div>
+            <button class="btn btn-primary" id="startBtn">Start ▶</button>
+            <button class="btn btn-ghost" id="resetBtn">Reset ↻</button>
+          </div>
+        </div>
+
+        <div class="pill controls">
+          <span>Controls:</span>
+          <span><kbd>←</kbd> <kbd>→</kbd> or <kbd>A</kbd> <kbd>D</kbd></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div id="board" aria-label="Cow heart game">
+        <div class="cloud">☁️</div>
+        <div class="cloud">☁️</div>
+        <div class="cloud">☁️</div>
+
+        <div id="cow">🐮</div>
+
+        <div class="overlay" id="overlay">
+          <div class="box">
+            <h2>🐮 Catch the hearts!</h2>
+            <p>
+              Press <b>Start</b>. Move with <b>Arrow keys</b> or <b>A/D</b>.<br/>
+              Get <b>10 hearts</b> in <b>30 seconds</b> to unlock the Valentine question 💘
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="tips">
+        <span id="status">Press <b>Start</b> to begin 🐮</span>
+        <span>Tip: hearts get faster 😈</span>
+      </div>
+    </section>
+  </div>
+
+  <!-- Valentine Modal -->
+  <section class="modal" id="modal">
+    <div class="modal-card">
+      <div class="badge">🐮💘 Moo-ment of truth</div>
+      <h2>Aditi, Will you be my Valentine?</h2>
+      <p>You and me… cow-together forever 🥺🐄💞</p>
+
+      <div class="choice">
+        <button class="btn btn-primary" id="yesBtn">YES!!! 💖</button>
+        <button class="btn" id="noBtn">No 😭</button>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    // ===== DOM Game State =====
+    const board = document.getElementById("board");
+    const cowEl = document.getElementById("cow");
+    const overlay = document.getElementById("overlay");
+
+    const scoreEl = document.getElementById("score");
+    const timeEl  = document.getElementById("time");
+    const statusEl = document.getElementById("status");
+    const startBtn = document.getElementById("startBtn");
+    const resetBtn = document.getElementById("resetBtn");
+
+    const modal = document.getElementById("modal");
+    const yesBtn = document.getElementById("yesBtn");
+    const noBtn  = document.getElementById("noBtn");
+
+    let running = false;
+    let score = 0;
+    let timeLeft = 30;
+    let timer = null;
+    let lastTs = 0;
+
+    // cow physics
+    let cowX = 0;           // in px relative to board
+    let cowV = 0;
+    const cowSpeed = 600;   // px/sec
+
+    // hearts
+    const hearts = []; // {el, x, y, vy}
+    let spawnEvery = 650;   // ms
+    let spawnAcc = 0;
+    let baseFall = 220;
+
+    // input
+    const keys = new Set();
+    window.addEventListener("keydown", (e) => {
+      if (["ArrowLeft","ArrowRight","a","A","d","D"].includes(e.key)) e.preventDefault();
+      keys.add(e.key);
+    });
+    window.addEventListener("keyup", (e) => keys.delete(e.key));
+
+    function boardRect(){ return board.getBoundingClientRect(); }
+
+    function stopConfetti(){
+      confettiRunning = false;
+      if (confAnim) cancelAnimationFrame(confAnim);
+      confAnim = null;
+      cctx.clearRect(0,0,window.innerWidth, window.innerHeight);
+    }
+
+    function resetGame(){
+      // stop continuous confetti on reset
+      stopConfetti();
+
+      running = false;
+      score = 0;
+      timeLeft = 30;
+      spawnEvery = 650;
+      spawnAcc = 0;
+      baseFall = 220;
+      scoreEl.textContent = score;
+      timeEl.textContent = timeLeft;
+      statusEl.innerHTML = "Press <b>Start</b> to begin 🐮";
+      overlay.style.display = "grid";
+
+      // close modal if open
+      modal.classList.remove("show");
+
+      // remove hearts
+      while (hearts.length){
+        const h = hearts.pop();
+        h.el.remove();
+      }
+
+      clearInterval(timer);
+
+      // center cow
+      const r = boardRect();
+      cowX = r.width / 2;
+      cowV = 0;
+      renderCow();
+    }
+
+    function startGame(){
+      if (running) return;
+      running = true;
+      overlay.style.display = "none";
+      statusEl.innerHTML = "Catch hearts! 💖";
+
+      clearInterval(timer);
+      timer = setInterval(() => {
+        timeLeft--;
+        timeEl.textContent = timeLeft;
+
+        // difficulty
+        baseFall += 14;
+        spawnEvery = Math.max(260, spawnEvery - 20);
+
+        if (timeLeft <= 0) endGame(false);
+      }, 1000);
+
+      lastTs = 0;
+      requestAnimationFrame(loop);
+    }
+
+    function endGame(won){
+      running = false;
+      clearInterval(timer);
+
+      if (won){
+        statusEl.innerHTML = "Unlocked!! Opening the question… 💘";
+        openValentineModal();
+        startConfetti(2200); // small celebratory burst on unlock
+      } else {
+        statusEl.innerHTML = "Time’s up 😭 Press <b>Start</b> to try again.";
+        overlay.style.display = "grid";
+      }
+    }
+
+    function updateInput(){
+      let dir = 0;
+      if (keys.has("ArrowLeft") || keys.has("a") || keys.has("A")) dir -= 1;
+      if (keys.has("ArrowRight") || keys.has("d") || keys.has("D")) dir += 1;
+      cowV = dir * cowSpeed;
+    }
+
+    function renderCow(){
+      cowEl.style.left = cowX + "px";
+    }
+
+    function spawnHeart(){
+      const r = boardRect();
+      const el = document.createElement("div");
+      el.className = "heart";
+      el.textContent = "💖";
+      board.appendChild(el);
+
+      const x = Math.random() * (r.width - 40) + 20;
+      const y = -30;
+      const vy = baseFall + Math.random() * 120;
+
+      el.style.left = x + "px";
+      el.style.top = y + "px";
+
+      hearts.push({ el, x, y, vy });
+    }
+
+    function loop(ts){
+      if (!running) return;
+      if (!lastTs) lastTs = ts;
+      const dt = Math.min(0.033, (ts - lastTs) / 1000);
+      lastTs = ts;
+
+      const r = boardRect();
+      const cowHalf = 28; // approx half width of emoji
+      const cowY = r.height - 14 - 40; // approx cow center-ish
+
+      updateInput();
+
+      cowX += cowV * dt;
+      cowX = Math.max(cowHalf, Math.min(r.width - cowHalf, cowX));
+      renderCow();
+
+      // spawn hearts
+      spawnAcc += dt * 1000;
+      if (spawnAcc >= spawnEvery){
+        spawnAcc = 0;
+        spawnHeart();
+      }
+
+      // update hearts + collision
+      for (let i = hearts.length - 1; i >= 0; i--){
+        const h = hearts[i];
+        h.y += h.vy * dt;
+        h.el.style.top = h.y + "px";
+
+        // collision check
+        const closeX = Math.abs(h.x - cowX) < 40;
+        const closeY = Math.abs(h.y - cowY) < 45;
+
+        if (closeX && closeY){
+          h.el.remove();
+          hearts.splice(i, 1);
+          score++;
+          scoreEl.textContent = score;
+          if (score >= 10) { endGame(true); break; }
+          continue;
+        }
+
+        // off screen
+        if (h.y > r.height + 60){
+          h.el.remove();
+          hearts.splice(i, 1);
+        }
+      }
+
+      requestAnimationFrame(loop);
+    }
+
+    // Buttons
+    startBtn.addEventListener("click", startGame);
+    resetBtn.addEventListener("click", resetGame);
+
+    // ===== Valentine Modal + No runs away (stays on-screen) =====
+    function openValentineModal(){
+      modal.classList.add("show");
+      // reset No button into normal flow
+      noBtn.style.position = "relative";
+      noBtn.style.left = "";
+      noBtn.style.top = "";
+      noBtn.style.zIndex = "";
+      noBtn.style.transform = "";
+    }
+
+    yesBtn.addEventListener("click", () => {
+      modal.classList.remove("show");
+      // continuous confetti after YES (until Reset)
+      startConfetti();
+      statusEl.innerHTML = "SHE SAID YES!!! 🐮💖 Screenshot this 😭";
+    });
+
+    function moveNoButton(){
+      const padding = 20;
+      noBtn.style.position = "fixed";
+      noBtn.style.zIndex = 2000;
+
+      const rect = noBtn.getBoundingClientRect();
+      const minX = padding;
+      const minY = padding;
+      const maxX = window.innerWidth  - rect.width  - padding;
+      const maxY = window.innerHeight - rect.height - padding;
+
+      const x = Math.floor(Math.random() * (maxX - minX + 1) + minX);
+      const y = Math.floor(Math.random() * (maxY - minY + 1) + minY);
+
+      noBtn.style.left = x + "px";
+      noBtn.style.top = y + "px";
+      noBtn.style.transform = `rotate(${(Math.random()*16-8).toFixed(1)}deg)`;
+    }
+
+    noBtn.addEventListener("mouseenter", moveNoButton);
+    noBtn.addEventListener("touchstart", (e) => { e.preventDefault(); moveNoButton(); }, { passive:false });
+
+    modal.addEventListener("click", (e) => { if (e.target === modal) modal.classList.remove("show"); });
+
+    // ===== Confetti =====
+    const conf = document.getElementById("confetti");
+    const cctx = conf.getContext("2d");
+    let confetti = [];
+    let confAnim = null;
+
+    // continuous controls
+    let confettiRunning = false;
+    let confettiEnd = 0; // 0 means run forever
+
+    function resizeConfetti(){
+      conf.width = window.innerWidth * devicePixelRatio;
+      conf.height = window.innerHeight * devicePixelRatio;
+      cctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+    }
+    window.addEventListener("resize", resizeConfetti);
+    resizeConfetti();
+
+    // If durationMs is omitted => continuous
+    function startConfetti(durationMs){
+      const rand = (a,b)=>Math.random()*(b-a)+a;
+
+      confettiRunning = true;
+      confettiEnd = (typeof durationMs === "number") ? (Date.now() + durationMs) : 0;
+
+      // rebuild particles
+      confetti = [];
+      for(let i=0;i<220;i++){
+        confetti.push({
+          x: rand(0, window.innerWidth),
+          y: rand(-window.innerHeight, 0),
+          vx: rand(-1.8, 1.8),
+          vy: rand(2.0, 5.2),
+          a: rand(0, Math.PI*2),
+          va: rand(-0.12, 0.12),
+          kind: Math.random() < 0.5 ? "💖" : "🐮",
+          size: rand(16, 26)
+        });
+      }
+
+      function frame(){
+        if (!confettiRunning) return;
+
+        cctx.clearRect(0,0,window.innerWidth, window.innerHeight);
+
+        confetti.forEach(p=>{
+          p.x += p.vx;
+          p.y += p.vy;
+          p.a += p.va;
+
+          if(p.y > window.innerHeight + 30){
+            p.y = rand(-220, -30);
+            p.x = rand(0, window.innerWidth);
+          }
+          if (p.x < -40) p.x = window.innerWidth + 40;
+          if (p.x > window.innerWidth + 40) p.x = -40;
+
+          cctx.save();
+          cctx.translate(p.x, p.y);
+          cctx.rotate(p.a);
+          cctx.font = `${p.size}px system-ui, Apple Color Emoji, Segoe UI Emoji`;
+          cctx.globalAlpha = 0.9;
+          cctx.fillText(p.kind, -8, 8);
+          cctx.restore();
+        });
+
+        // stop if timed (burst mode)
+        if (confettiEnd && Date.now() >= confettiEnd){
+          stopConfetti();
+          return;
+        }
+
+        confAnim = requestAnimationFrame(frame);
+      }
+
+      if(confAnim) cancelAnimationFrame(confAnim);
+      frame();
+    }
+
+    // init
+    resetGame();
+  </script>
+</body>
+</html>
